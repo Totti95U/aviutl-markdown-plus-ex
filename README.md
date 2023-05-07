@@ -88,7 +88,7 @@ aviutl_browser は Chromium でレンダリングした HTML ページを AviUtl
 その中の54行目 `"macros" : {` から 58行目までが LaTeX マクロに関する項目です。
 `"macros" : { "\\Q" : "\\mathbb Q", "\\C" : "\\mathbb C" }` のように `"コマンド名" : "定義式"` という形を列挙していきます。
 `"\\map" : "#1 \\colon #2 \\to #3"` のように引数を取るコマンドも定義可能です。
-より詳しくは https://katex.org/docs/options.html を参照してください。
+より詳しくは https://katex.org/docs/options.html および https://katex.org/docs/supported.html#macros を参照してください。
 
 ## 独自記法の追加
 `contents/Markdown+EX/self-extensions.js` を弄ることでオリジナルの記法を導入できます。
