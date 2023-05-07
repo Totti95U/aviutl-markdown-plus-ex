@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+}
+body {
+  margin-top: 1px;
+  overflow: hidden;
+}
+#dummy {
+  visibility: hidden;
+}
+</style>
+<style id="markdown-style"></style>
+<style id="hljs-style"></style>
+<dody>
+  <div id="container"></div>
+  <div id="dummy"><p>
+  <!-- katexフォント読み込み用 -->
+  $$
+  \mathbb{A} \mathcal{A} \mathfrak{A}
+  \mathrm{A} \mathit{A} \mathbf{A}
+  A  \mathsf{A} \mathscr{A}
+  \bigl( \Bigl( \biggl( \Biggl(
+  \mathtt{A}
+  \vec{} \boldsymbol{ \vec{} }
+  $$
+  </p></div>
+</dody>
+
+<script src="./marked.min.js"></script>
+<script src="./self-extensions.js"></script>
+<script src="./highlight.min.js"></script>
+
+<link rel="stylesheet" href="./katex/katex.min.css">
+<script>
+  // texのオプション (https://katex.org/docs/options.htmlを参照)
+  const katex_options = {
+    // デリミタ ($ $ とか \[ \] とかのやつ)
+    "delimiters" : [
+      {"left": "\\begin{equation}", "right": "\\end{equation}", "display": true},
+      {"left": "\\begin{align}", "right": "\\end{align}", "display": true},
+      {"left": "\\begin{alignat}", "right": "\\end{alignat}", "display": true},
+      {"left": "\\begin{gather}", "right": "\\end{gather}", "display": true},
+      {"left": "\\begin{CD}", "right": "\\end{CD}", "display": true},
+      {"left": "$$", "right": "$$", "display": true}, // $$ は $ よりも上にないとダメ
+      {"left": "\\[", "right": "\\]", "display": true},
+      {"left": "$", "right": "$", "display": false},
+      {"left": "\\(", "right": "\\)", "display": false}
+    ],
+    // マクロ
+    "macros" : {
+      "\\Q" : "\\mathbb Q",
+      "\\C" : "\\mathbb C",
+      "\\map" : "#1 \\colon #2 \\to #3" //定義コマンドは引数を明示しなくてよい
+    },
+    // その他
+    "output": "html",
+    "throwOnError": false,
+    "errorColor" : "#cc0000"
+  };
+</script>
+<script defer src="./katex/katex.min.js"></script>
+<script defer src="./katex/contrib/auto-render.min.js" onload="renderMathInElement(document.body, katex_options);"></script>
+<script type="module">
+import { EmojisCache, StyleSelector, Page } from './main.js';
+
+const elem = document.getElementById('container');
+
+const markdownStyles = new StyleSelector('markdown');
+const hljsStyles = new StyleSelector('hljs');
+const emojiCache = new EmojisCache();
+const pages = {};
+let current = new Page();
+
+const renderer = new marked.Renderer();
+renderer.text = text => {
+  let output = '';
+  let start = 0;
+  for (const match of text.matchAll(/:([a-zA-Z0-9-+_]+):/g)) {
+    output += text.substring(start, match.index);
+    start = match.index + match[0].length;
+    if (match[1] in current.emojis.images) {
+      const src = current.emojis.getImagePath(match[1]);
+      output += `<img class="emoji" data-src="${src}">`;
+    } else {
+      output += match[0];
+    }
+  }
+  output += text.substring(start);
+  return output;
+};
+
+marked.setOptions({
+  langPrefix: '',
+  highlight: (code, lang) => {
+    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+    return hljs.highlight(code, {language}).value;
+  },
+  renderer: renderer,
+});
+
+const typeset = elems => {
+  MathJax.startup.promise = MathJax.startup.promise
+    .then(() => MathJax.typesetPromise(elems))
+    .catch(err => console.log('Typeset failed: ' + err.message));
+  return MathJax.startup.promise;
+};
+
+const parseParam = param => {
+  let prev = 0;
+  const popstring = () => {
+    const next = param.indexOf('/', prev);
+    if (next === -1) throw new Error('invalid parameter');
+    const s = param.substring(prev, next);
+    prev = next + 1;
+    return s;
+  }
+
+  const parsed = {};
+  parsed.mode = popstring();
+  parsed.layer = popstring();
+  parsed.scale = parseInt(popstring(), 10) / 100;
+  parsed.markdownStyle = popstring();
+  parsed.hljsStyle = popstring();
+  parsed.emojis = popstring();
+  parsed.markdown = param.substring(prev);
+  return parsed;
+};
+
+AviUtlBrowser.registerRenderer(async params => {
+  const param = parseParam(params.param);
+  let update = false;
+  const promises = [];
+
+  if (param.layer in pages === false) {
+    pages[param.layer] = new Page();
+    elem.appendChild(pages[param.layer].elem);
+  }
+  current = pages[param.layer];
+  for (const key in pages) {
+    if (key === param.layer) {
+      pages[key].elem.style.display = 'block';
+    } else {
+      pages[key].elem.style.display = 'none';
+    }
+  }
+
+  current.elem.style.zoom = param.scale;
+  promises.push(markdownStyles.select(param.markdownStyle));
+  promises.push(hljsStyles.select(param.hljsStyle));
+
+  if (current.emojis.name !== param.emojis) {
+    current.emojis = await emojiCache.get(param.emojis);
+    update = true;
+  }
+
+  if (param.mode === "text" && current.markdown !== param.markdown) {
+    current.markdown = param.markdown;
+    update = true;
+  } else if (param.mode === "file"
+    && (current.mode === 'text' || current.file !== params.userfile))
+  {
+    current.file = params.userfile;
+    current.markdown = await fetch('/userfile').then(r => r.text());
+    update = true;
+  }
+  current.mode = param.mode;
+
+  if (update) {
+    current.elem.innerHTML = marked.parse(current.markdown);
+    renderMathInElement(document.body, katex_options);
+    document.querySelectorAll('.markdown-body img.emoji').forEach(img => {
+      const src = img.dataset.src;
+      img.src = src;
+      promises.push(new Promise(resolve => {
+        img.onload = () => resolve(img);
+      }));
+    });
+    promises.push(typeset([current.elem]));
+  }
+
+  await Promise.all(promises);
+
+  return '';
+});
+</script>
+</html>
