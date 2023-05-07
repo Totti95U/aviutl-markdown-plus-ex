@@ -14,7 +14,7 @@ Markdown を表示するスクリプト。
 ## MarkdownEX との違い
 
 - 数式のレンダリングを `MathJaX` から `KaTeX` に変更
-- `TeX` のマクロを追加する仕組みを導入
+- `LaTeX` マクロを追加する仕組みを導入
 - 独自の Markdown 記法を追加できる仕組みを導入
 
 ## 導入方法
@@ -82,6 +82,18 @@ aviutl_browser は Chromium でレンダリングした HTML ページを AviUtl
 また、 `img` フォルダ内に新しく作ったフォルダ内に画像ファイルと `setting.json`
 を保存することで別の絵文字セットを作ることもできます。
 使用する絵文字セットを変更する際は、設定ダイアログの`絵文字`から使用したい絵文字セットのフォルダ名を指定してください。
+
+## LaTeX マクロの追加
+`contents/Markdown+EX/index.html` の40行目、`const katex_options = {` から63行目までには数式に関するオプションが書いてあります。
+その中の54行目 `"macros" : {` から 58行目までが LaTeX マクロに関する項目です。
+`"macros" : { "\\Q" : "\\mathbb Q", "\\C" : "\\mathbb C" }` のように `"コマンド名" : "定義式"` という形を列挙していきます。
+`"\\map" : "#1 \\colon #2 \\to #3"` のように引数を取るコマンドも定義可能です。
+より詳しくは https://katex.org/docs/options.html を参照してください。
+
+## 独自記法の追加
+`contents/Markdown+EX/self-extensions.js` を弄ることでオリジナルの記法を導入できます。
+独自記法の例として Markdown+ EX では最初から `[` と `]` で囲った部分にマーカーが引かれる機能が追加されています。
+独自記法追加の詳細については `self-extensions.js` 内のコメントや https://marked.js.org/using_pro を参照してください。
 
 ## 補助モジュール
 
